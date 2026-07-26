@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.vercel
+
+# Data snapshots (served from GCS, not git)
+api/snapshot/*.json
+
+# GCP credentials
+*service-account*.json
+gcp-key.json
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
