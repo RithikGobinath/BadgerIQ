@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -52,8 +53,10 @@ export function SearchCommand({
       onOpenChange={onOpenChange}
       title="Search courses"
       description="Search UW-Madison courses by code or name"
-      shouldFilter={false}
     >
+      {/* Results are already ranked by the API - cmdk must not re-filter
+          them (item values are uuids, which would never match the query). */}
+      <Command shouldFilter={false}>
       <CommandInput
         placeholder="Search courses — try “comp sci 540” or “microeconomics”…"
         value={query}
@@ -92,6 +95,7 @@ export function SearchCommand({
           </CommandGroup>
         )}
       </CommandList>
+      </Command>
     </CommandDialog>
   );
 }
