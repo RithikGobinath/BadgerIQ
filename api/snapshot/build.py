@@ -90,6 +90,10 @@ def build_snapshot(grades: pd.DataFrame, courses: pd.DataFrame, rmp: pd.DataFram
     grades["gpa"] = grades.apply(weighted_gpa, axis=1)
 
     courses = courses.set_index("uuid")
+    # RMP pagination can return the same teacher on two pages, and the fuzzy
+    # match can map one Madgrades name to the same RMP record twice - keep
+    # the row with the most ratings for each name.
+    rmp = rmp.sort_values("num_ratings", ascending=False).drop_duplicates("madgrades_instructor_name")
     rmp_by_name = rmp.set_index("madgrades_instructor_name").to_dict("index")
 
     course_entries = []
