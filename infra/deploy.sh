@@ -28,16 +28,18 @@ gcloud run deploy badgeriq-api \
   --allow-unauthenticated
 
 echo "Deploying Cloud Run job badgeriq-snapshot"
+# NB: --args must use = syntax; with a space, gcloud mis-parses values
+# that start with a dash (e.g. "-m,snapshot.build")
 gcloud run jobs deploy badgeriq-snapshot \
-  --image "${IMAGE}" \
-  --region "${REGION}" \
-  --command python \
-  --args "-m,snapshot.build" \
-  --service-account "${SNAPSHOT_SA}" \
-  --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID},GCS_BUCKET_SNAPSHOT=badgeriq-snapshots" \
-  --memory 2Gi \
-  --max-retries 1 \
-  --task-timeout 1800
+  --image="${IMAGE}" \
+  --region="${REGION}" \
+  --command=python \
+  --args="-m,snapshot.build" \
+  --service-account="${SNAPSHOT_SA}" \
+  --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCS_BUCKET_SNAPSHOT=badgeriq-snapshots" \
+  --memory=2Gi \
+  --max-retries=1 \
+  --task-timeout=1800
 
 echo "Scheduling weekly snapshot rebuild"
 gcloud scheduler jobs create http badgeriq-weekly-snapshot \
