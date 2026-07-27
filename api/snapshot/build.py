@@ -23,6 +23,8 @@ from pathlib import Path
 import pandas as pd
 from google.cloud import bigquery, storage
 
+from snapshot.enroll_join import attach_to_courses, build_enroll_index
+
 GRADE_POINTS = {"a": 4.0, "ab": 3.5, "b": 3.0, "bc": 2.5, "c": 2.0, "d": 1.0, "f": 0.0}
 GRADE_KEYS = list(GRADE_POINTS)
 
@@ -83,7 +85,13 @@ def load_frames(project: str, dataset: str) -> tuple[pd.DataFrame, pd.DataFrame,
     )
 
 
-def build_snapshot(grades: pd.DataFrame, courses: pd.DataFrame, rmp: pd.DataFrame) -> dict:
+def build_snapshot(
+    grades: pd.DataFrame,
+    courses: pd.DataFrame,
+    rmp: pd.DataFrame,
+    enroll_catalog: list[dict] | None = None,
+    enroll_packages: list[dict] | None = None,
+) -> dict:
     grades = grades.dropna(subset=["instructor_name"]).copy()
     grades["graded"] = grades[GRADE_KEYS].sum(axis=1)
     grades = grades[grades["graded"] > 0]
@@ -172,6 +180,15 @@ def build_snapshot(grades: pd.DataFrame, courses: pd.DataFrame, rmp: pd.DataFram
             }
         )
 
+    # ---- enroll.wisc.edu: prerequisites, gen-ed, live seats/schedule ----
+    enroll_matched = 0
+    if enroll_catalog:
+        enroll_index = build_enroll_index(enroll_catalog, enroll_packages or [], term_label)
+        enroll_matched = attach_to_courses(course_entries, enroll_index)
+    else:
+        for c in course_entries:
+            c["catalog"] = None
+
     # ---- difficulty rankings ----
     ranked = [
         c for c in course_entries
@@ -241,6 +258,7 @@ def build_snapshot(grades: pd.DataFrame, courses: pd.DataFrame, rmp: pd.DataFram
             "instructors": int(grades["instructor_name"].nunique()),
             "flags": len(flag_entries),
             "terms": f"{term_label(int(grades['term_code'].min()))} - {term_label(int(grades['term_code'].max()))}",
+            "courses_with_current_catalog_data": enroll_matched,
         },
         "courses": course_entries,
         "flags": flag_entries,
@@ -258,6 +276,23 @@ def upload(doc: dict, bucket_name: str, project: str, run_date: str) -> None:
         print(f"Uploaded gs://{bucket_name}/{name} ({len(payload) / 1e6:.1f} MB)")
 
 
+def _load_local_enroll_data() -> tuple[list[dict] | None, list[dict] | None]:
+    """Read the raw enroll.wisc.edu pull if enroll_client.run() has already
+    populated it locally. Missing files degrade gracefully - the snapshot
+    still builds fine from BigQuery alone, just without prerequisites/gen-ed/
+    live-seats fields, rather than failing the whole weekly refresh."""
+    raw_dir = Path("data/raw/enroll")
+    catalog_path = raw_dir / "catalog.json"
+    packages_path = raw_dir / "enrollment_packages.json"
+    if not catalog_path.exists():
+        print("  No local enroll.wisc.edu catalog found - skipping current-term enrichment")
+        return None, None
+    catalog = json.loads(catalog_path.read_text())
+    packages = json.loads(packages_path.read_text()) if packages_path.exists() else []
+    print(f"  Loaded {len(catalog)} catalog records, {len(packages)} live enrollment records")
+    return catalog, packages
+
+
 def run() -> None:
     project = os.environ["GCP_PROJECT_ID"]
     dataset = os.environ.get("BQ_DATASET", "courseiq")
@@ -267,8 +302,11 @@ def run() -> None:
     grades, courses, rmp = load_frames(project, dataset)
     print(f"  {len(grades)} instructor-course-term rows, {len(courses)} courses, {len(rmp)} RMP matches")
 
+    print("Loading enroll.wisc.edu data...")
+    enroll_catalog, enroll_packages = _load_local_enroll_data()
+
     print("Building snapshot...")
-    doc = build_snapshot(grades, courses, rmp)
+    doc = build_snapshot(grades, courses, rmp, enroll_catalog, enroll_packages)
     doc["built_at"] = date.today().isoformat()
     print(f"  {doc['stats']}")
 
