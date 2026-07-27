@@ -8,8 +8,10 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "google-cloud-storage>=2.16",
     "google-cloud-bigquery>=3.25",
+    "db-dtypes>=1.2",
     "pandas>=2.2",
     "python-dotenv>=1.0",
+    "requests>=2.31",
 ]
 
 [project.optional-dependencies]
@@ -24,4 +26,4 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["app*", "snapshot*"]
+include = ["app*", "snapshot*", "ingest*"]

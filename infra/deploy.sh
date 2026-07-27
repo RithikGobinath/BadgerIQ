@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # Build the API image and deploy:
-#   1. badgeriq-api        - public Cloud Run service (scale-to-zero)
-#   2. badgeriq-snapshot   - Cloud Run job rebuilding the snapshot weekly
-#   3. badgeriq-weekly-snapshot - Cloud Scheduler trigger (Mon 10:00 UTC,
-#      after CourseIQ's 06:00 refresh has finished)
+#   1. badgeriq-api      - public Cloud Run service (scale-to-zero)
+#   2. badgeriq-refresh  - Cloud Run job: enroll.wisc.edu ingestion (catalog
+#                          + live seats) + BigQuery + snapshot rebuild
+#   3. badgeriq-daily-refresh - Cloud Scheduler trigger (daily, 11:00 UTC)
+#
+# Daily rather than the originally-planned weekly-catalog/4-hourly-seats
+# split: the full enrollment-packages pull is ~40min of runtime, and
+# 4-hourly would run ~5x over the Cloud Run free tier. Daily fits inside
+# it and is already more frequent than the catalog needs, so one combined
+# job keeps this simple.
 #
 # Requires: gcloud authenticated, GCP_PROJECT_ID set, and the service
 # accounts below already created (see infra/README.md).
@@ -13,7 +19,7 @@ PROJECT_ID="${GCP_PROJECT_ID:?Set GCP_PROJECT_ID}"
 REGION="${GCP_REGION:-us-central1}"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/courseiq/badgeriq-api:latest"
 API_SA="badgeriq-api@${PROJECT_ID}.iam.gserviceaccount.com"
-SNAPSHOT_SA="courseiq-refresh@${PROJECT_ID}.iam.gserviceaccount.com"
+REFRESH_SA="courseiq-refresh@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "Building ${IMAGE}"
 gcloud builds submit --tag "${IMAGE}" api/
@@ -27,32 +33,33 @@ gcloud run deploy badgeriq-api \
   --memory 512Mi \
   --allow-unauthenticated
 
-echo "Deploying Cloud Run job badgeriq-snapshot"
+echo "Deploying Cloud Run job badgeriq-refresh"
 # NB: --args must use = syntax; with a space, gcloud mis-parses values
-# that start with a dash (e.g. "-m,snapshot.build")
-gcloud run jobs deploy badgeriq-snapshot \
+# that start with a dash.
+gcloud run jobs deploy badgeriq-refresh \
   --image="${IMAGE}" \
   --region="${REGION}" \
   --command=python \
-  --args="-m,snapshot.build" \
-  --service-account="${SNAPSHOT_SA}" \
-  --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCS_BUCKET_SNAPSHOT=badgeriq-snapshots" \
-  --memory=2Gi \
+  --args="refresh.py" \
+  --service-account="${REFRESH_SA}" \
+  --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCS_BUCKET_SNAPSHOT=badgeriq-snapshots,BQ_DATASET=courseiq" \
+  --memory=4Gi \
+  --cpu=2 \
   --max-retries=1 \
-  --task-timeout=1800
+  --task-timeout=5400
 
-echo "Scheduling weekly snapshot rebuild"
-gcloud scheduler jobs create http badgeriq-weekly-snapshot \
+echo "Scheduling daily refresh"
+gcloud scheduler jobs create http badgeriq-daily-refresh \
   --location "${REGION}" \
-  --schedule "0 10 * * 1" \
-  --uri "https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/badgeriq-snapshot:run" \
+  --schedule "0 11 * * *" \
+  --uri "https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/badgeriq-refresh:run" \
   --http-method POST \
-  --oauth-service-account-email "${SNAPSHOT_SA}" \
-  || gcloud scheduler jobs update http badgeriq-weekly-snapshot \
+  --oauth-service-account-email "${REFRESH_SA}" \
+  || gcloud scheduler jobs update http badgeriq-daily-refresh \
   --location "${REGION}" \
-  --schedule "0 10 * * 1" \
-  --uri "https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/badgeriq-snapshot:run" \
+  --schedule "0 11 * * *" \
+  --uri "https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/badgeriq-refresh:run" \
   --http-method POST \
-  --oauth-service-account-email "${SNAPSHOT_SA}"
+  --oauth-service-account-email "${REFRESH_SA}"
 
 echo "Done."

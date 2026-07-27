@@ -5,6 +5,8 @@ WORKDIR /app
 COPY pyproject.toml .
 COPY app ./app
 COPY snapshot ./snapshot
+COPY ingest ./ingest
+COPY refresh.py .
 RUN pip install --no-cache-dir .
 
 ENV PYTHONUNBUFFERED=1
