@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { api, fmtGpa, type CourseDetail } from "@/lib/api";
 import { GradeDist } from "@/components/grade-dist";
 import { InstructorTable } from "@/components/instructor-table";
+import { GenEdBadges } from "@/components/gen-ed-badges";
+import { CurrentSections } from "@/components/current-sections";
 
 export const revalidate = 3600;
 
@@ -67,6 +69,38 @@ export default async function CoursePage({ params }: Props) {
         />
         <Stat value={String(course.n_terms)} label="Terms offered" />
       </div>
+
+      {course.catalog && (
+        <section className="mt-10">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">This term</h2>
+            {course.catalog.credits.range && (
+              <span className="text-sm text-muted-foreground">{course.catalog.credits.range} credits</span>
+            )}
+          </div>
+
+          <GenEdBadges genEd={course.catalog.gen_ed} />
+
+          {course.catalog.description && (
+            <p className="mt-3 text-sm text-muted-foreground">{course.catalog.description}</p>
+          )}
+
+          {(course.catalog.prerequisites.enrollment || course.catalog.prerequisites.advisory) && (
+            <div className="mt-4 rounded-xl border border-border bg-card p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Prerequisites
+              </div>
+              <p className="mt-1.5 text-sm">
+                {course.catalog.prerequisites.enrollment ?? course.catalog.prerequisites.advisory}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <CurrentSections offering={course.catalog.current_offering} />
+          </div>
+        </section>
+      )}
 
       <section className="mt-10">
         <h2 className="mb-4 text-lg font-semibold">Grade distribution</h2>

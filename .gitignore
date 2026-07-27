@@ -13,8 +13,9 @@ out/
 *.tsbuildinfo
 .vercel
 
-# Data snapshots (served from GCS, not git)
+# Data snapshots and raw pulls (served from GCS, not git)
 api/snapshot/*.json
+api/data/
 
 # GCP credentials
 *service-account*.json
