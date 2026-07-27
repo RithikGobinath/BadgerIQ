@@ -81,6 +81,11 @@ def _extract_sections(packages: list[dict]) -> list[dict]:
                     "meetings": [
                         {
                             "days": m.get("meetingDays"),
+                            # meetingDays ("MWF") is ambiguous for display-only
+                            # parsing (is "S" Sat or Sun? is "R" Thu?) - the API
+                            # also gives an unambiguous full-name list, which is
+                            # what conflict detection / calendar placement uses.
+                            "days_list": m.get("meetingDaysList") or [],
                             "start": _ms_to_clock(m.get("meetingTimeStart")),
                             "end": _ms_to_clock(m.get("meetingTimeEnd")),
                             "building": (m.get("building") or {}).get("buildingName"),

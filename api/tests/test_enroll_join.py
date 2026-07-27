@@ -61,6 +61,7 @@ ENROLLMENT_PACKAGES = [
                                 "meetingTimeStart": 73500000,
                                 "meetingTimeEnd": 76500000,
                                 "meetingDays": "MWF",
+                                "meetingDaysList": ["MONDAY", "WEDNESDAY", "FRIDAY"],
                                 "building": {"buildingName": "Mosse Humanities Building"},
                                 "room": "2650",
                             },
@@ -110,7 +111,14 @@ def test_build_index_and_attach_matches_by_subject_and_number():
     section = offering["sections"][0]
     assert section["seats"] == {"available": 7, "waitlist": 0, "status": "OPEN"}
     assert section["meetings"] == [
-        {"days": "MWF", "start": "20:25", "end": "21:15", "building": "Mosse Humanities Building", "room": "2650"}
+        {
+            "days": "MWF",
+            "days_list": ["MONDAY", "WEDNESDAY", "FRIDAY"],
+            "start": "20:25",
+            "end": "21:15",
+            "building": "Mosse Humanities Building",
+            "room": "2650",
+        }
     ]
     assert section["instructor"] == "Cole Nelson"
     assert section["final_exam_date"] == 1797055200000
