@@ -97,7 +97,15 @@ export default async function CoursePage({ params }: Props) {
           )}
 
           <div className="mt-5">
-            <CurrentSections offering={course.catalog.current_offering} />
+            <CurrentSections
+              offering={course.catalog.current_offering}
+              course={{
+                uuid: course.uuid,
+                code: course.code,
+                name: course.name,
+                creditsRange: course.catalog.credits.range,
+              }}
+            />
           </div>
         </section>
       )}

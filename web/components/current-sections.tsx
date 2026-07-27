@@ -1,5 +1,14 @@
 import type { CurrentOffering } from "@/lib/api";
 import { fmtClock, fmtDays, fmtRelativeTime, seatsLabel } from "@/lib/api";
+import { AddToPlanButton } from "@/components/add-to-plan-button";
+import type { PlanItem } from "@/lib/plan";
+
+type CourseContext = {
+  uuid: string;
+  code: string;
+  name: string;
+  creditsRange: string | null;
+};
 
 const TONE_STYLES: Record<string, { bg: string; fg: string }> = {
   open: { bg: "rgba(12,163,12,0.12)", fg: "var(--good)" },
@@ -21,7 +30,7 @@ function SeatsBadge({ seats }: { seats: import("@/lib/api").Seats }) {
   );
 }
 
-export function CurrentSections({ offering }: { offering: CurrentOffering | null }) {
+export function CurrentSections({ offering, course }: { offering: CurrentOffering | null; course: CourseContext }) {
   if (!offering || offering.sections.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
@@ -43,46 +52,63 @@ export function CurrentSections({ offering }: { offering: CurrentOffering | null
               <th className="px-4 py-3 font-medium">Section</th>
               <th className="px-3 py-3 font-medium">Instructor</th>
               <th className="px-3 py-3 font-medium">Meets</th>
-              <th className="px-4 py-3 text-right font-medium">Seats</th>
+              <th className="px-3 py-3 text-right font-medium">Seats</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {offering.sections.map((s, i) => (
-              <tr key={`${s.section_number}-${i}`} className="transition-colors hover:bg-secondary/40">
-                <td className="px-4 py-3">
-                  <span className="font-medium">{s.type}</span>{" "}
-                  <span className="text-muted-foreground">{s.section_number}</span>
-                </td>
-                <td className="px-3 py-3 text-muted-foreground">{s.instructor ?? "Staff"}</td>
-                <td className="px-3 py-3">
-                  {s.meetings.length === 0 ? (
-                    <span className="text-muted-foreground">
-                      {s.instruction_mode?.includes("Online") ? "Online" : "TBA"}
-                    </span>
-                  ) : (
-                    <div className="flex flex-col gap-0.5">
-                      {s.meetings.map((m, mi) => (
-                        <div key={mi}>
-                          <span className="font-medium">{fmtDays(m.days)}</span>{" "}
-                          <span className="text-muted-foreground">
-                            {fmtClock(m.start)}–{fmtClock(m.end)}
-                            {m.building && (
-                              <>
-                                {" · "}
-                                {m.building} {m.room}
-                              </>
-                            )}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <SeatsBadge seats={s.seats} />
-                </td>
-              </tr>
-            ))}
+            {offering.sections.map((s, i) => {
+              const planItem: PlanItem = {
+                id: `${course.uuid}:${s.section_number}:${s.type}`,
+                courseUuid: course.uuid,
+                courseCode: course.code,
+                courseName: course.name,
+                creditsRange: course.creditsRange,
+                sectionNumber: s.section_number,
+                type: s.type,
+                instructor: s.instructor,
+                meetings: s.meetings,
+              };
+              return (
+                <tr key={`${s.section_number}-${i}`} className="transition-colors hover:bg-secondary/40">
+                  <td className="px-4 py-3">
+                    <span className="font-medium">{s.type}</span>{" "}
+                    <span className="text-muted-foreground">{s.section_number}</span>
+                  </td>
+                  <td className="px-3 py-3 text-muted-foreground">{s.instructor ?? "Staff"}</td>
+                  <td className="px-3 py-3">
+                    {s.meetings.length === 0 ? (
+                      <span className="text-muted-foreground">
+                        {s.instruction_mode?.includes("Online") ? "Online" : "TBA"}
+                      </span>
+                    ) : (
+                      <div className="flex flex-col gap-0.5">
+                        {s.meetings.map((m, mi) => (
+                          <div key={mi}>
+                            <span className="font-medium">{fmtDays(m.days)}</span>{" "}
+                            <span className="text-muted-foreground">
+                              {fmtClock(m.start)}–{fmtClock(m.end)}
+                              {m.building && (
+                                <>
+                                  {" · "}
+                                  {m.building} {m.room}
+                                </>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    <SeatsBadge seats={s.seats} />
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <AddToPlanButton item={planItem} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

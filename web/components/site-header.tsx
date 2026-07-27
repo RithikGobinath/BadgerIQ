@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSearch } from "@/components/search-command";
+import { usePlan } from "@/components/plan-provider";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -13,6 +14,7 @@ const nav = [
 export function SiteHeader() {
   const pathname = usePathname();
   const { open } = useSearch();
+  const { items, conflicts } = usePlan();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
@@ -42,9 +44,27 @@ export function SiteHeader() {
           ))}
         </nav>
 
+        <Link
+          href="/plan"
+          className={cn(
+            "ml-auto flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground",
+            pathname.startsWith("/plan") && "bg-secondary text-foreground",
+          )}
+        >
+          My Plan
+          {items.length > 0 && (
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white"
+              style={{ background: conflicts.length > 0 ? "var(--crit)" : "var(--data-blue)" }}
+            >
+              {items.length}
+            </span>
+          )}
+        </Link>
+
         <button
           onClick={open}
-          className="ml-auto flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
+          className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="7" />

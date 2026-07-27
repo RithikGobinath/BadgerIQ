@@ -36,7 +36,8 @@ export type Instructor = {
 export type GenEdTag = { code: string; description: string };
 
 export type Meeting = {
-  days: string | null;
+  days: string | null; // "MWF" - display only, ambiguous to parse
+  days_list: string[]; // ["MONDAY","WEDNESDAY","FRIDAY"] - unambiguous, use for logic
   start: string | null; // "HH:MM", 24h
   end: string | null;
   building: string | null;

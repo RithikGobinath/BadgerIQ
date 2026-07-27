@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SearchProvider } from "@/components/search-command";
+import { PlanProvider } from "@/components/plan-provider";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
@@ -34,26 +35,28 @@ export default function RootLayout({
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
-        <SearchProvider>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-            Built on 20 years of Madgrades data ·{" "}
-            <a
-              href="https://github.com/RithikGobinath/BadgerIQ"
-              className="underline-offset-4 hover:text-foreground hover:underline"
-            >
-              GitHub
-            </a>{" "}
-            ·{" "}
-            <a
-              href="https://github.com/RithikGobinath/CourseIQ"
-              className="underline-offset-4 hover:text-foreground hover:underline"
-            >
-              CourseIQ pipeline
-            </a>
-          </footer>
-        </SearchProvider>
+        <PlanProvider>
+          <SearchProvider>
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
+              Built on 20 years of Madgrades data ·{" "}
+              <a
+                href="https://github.com/RithikGobinath/BadgerIQ"
+                className="underline-offset-4 hover:text-foreground hover:underline"
+              >
+                GitHub
+              </a>{" "}
+              ·{" "}
+              <a
+                href="https://github.com/RithikGobinath/CourseIQ"
+                className="underline-offset-4 hover:text-foreground hover:underline"
+              >
+                CourseIQ pipeline
+              </a>
+            </footer>
+          </SearchProvider>
+        </PlanProvider>
       </body>
     </html>
   );
