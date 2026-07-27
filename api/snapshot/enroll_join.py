@@ -133,7 +133,7 @@ def attach_to_courses(course_entries: list[dict], enroll_index: dict[tuple[str, 
     Returns the number of courses matched, for logging/sanity-checking."""
     matched = 0
     for course in course_entries:
-        key = (course["subject_code"], str(course.get("number") if course.get("number") is not None else ""))
+        key = (course["subject_code"], str(course["number"]))
         enrich = enroll_index.get(key)
         if enrich is None:
             course["catalog"] = None

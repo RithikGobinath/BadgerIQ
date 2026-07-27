@@ -166,6 +166,7 @@ def build_snapshot(
             {
                 "uuid": uuid,
                 "code": code,
+                "number": str(meta["number"]),
                 "name": meta["name"],
                 "subject": meta["subject_name"],
                 "subject_code": meta["subject_code"],
