@@ -48,6 +48,19 @@ def term_label(term_code: int) -> str:
     return f"{sem} {year}"
 
 
+def clean_str(val) -> str | None:
+    """Coerce a BigQuery-sourced value to a proper string or None.
+
+    A NULL STRING column can come back from pandas as either None or a
+    float('nan') depending on dtype handling - and NaN survives
+    json.dumps as a literal (invalid-JSON-but-Python-accepts-it) NaN
+    token, round-tripping back into a float that crashes any code
+    (frontend or backend) that assumes a string. pd.isna() is the only
+    reliable way to catch both representations at once.
+    """
+    return None if pd.isna(val) else str(val)
+
+
 def weighted_gpa(row_or_df) -> float | None:
     graded = sum(row_or_df[k] for k in GRADE_KEYS)
     if not graded:
@@ -167,8 +180,8 @@ def build_snapshot(
                 "uuid": uuid,
                 "code": code,
                 "number": str(meta["number"]),
-                "name": meta["name"],
-                "subject": meta["subject_name"],
+                "name": clean_str(meta["name"]),
+                "subject": clean_str(meta["subject_name"]),
                 "subject_code": meta["subject_code"],
                 "gpa": course_gpa,
                 "enrollment": graded_total,

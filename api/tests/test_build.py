@@ -1,6 +1,8 @@
+import math
+
 import pandas as pd
 
-from snapshot.build import build_snapshot, term_label, weighted_gpa
+from snapshot.build import build_snapshot, clean_str, term_label, weighted_gpa
 
 
 def make_frames():
@@ -40,6 +42,27 @@ def test_weighted_gpa():
 def test_term_label():
     assert term_label(1244) == "Spring 2024"
     assert term_label(1092) == "Fall 2008"
+
+
+def test_clean_str_catches_both_null_representations():
+    # A NULL STRING column from BigQuery can come back via pandas as either
+    # representation depending on dtype handling - real prod crash was a
+    # course with name == nan (float), not None, which .lower() choked on
+    # after round-tripping through json.dumps (which emits nan as a literal
+    # NaN token, not null) and back.
+    assert clean_str(None) is None
+    assert clean_str(float("nan")) is None
+    assert clean_str("Intro to Programming") == "Intro to Programming"
+    assert clean_str(300) == "300"
+
+
+def test_snapshot_handles_null_course_name():
+    grades, courses, rmp = make_frames()
+    courses.loc[courses["uuid"] == "x", "name"] = float("nan")
+    doc = build_snapshot(grades, courses, rmp)
+    course_x = next(c for c in doc["courses"] if c["uuid"] == "x")
+    assert course_x["name"] is None  # not NaN - must survive a JSON round-trip untouched
+    assert not (isinstance(course_x["name"], float) and math.isnan(course_x["name"]))
 
 
 def test_snapshot_flags_harsh_grader_and_attaches_rmp():

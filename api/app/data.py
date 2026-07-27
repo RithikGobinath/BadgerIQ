@@ -19,10 +19,16 @@ class Store:
         self.flags: list[dict] = doc["flags"]
 
         self.by_uuid: dict[str, dict] = {c["uuid"]: c for c in self.courses}
-        # search rows: (lowercased code, lowercased name, course)
-        self._search_rows = [(c["code"].lower(), (c["name"] or "").lower(), c) for c in self.courses]
+        # search rows: (lowercased code, lowercased name, course). Defensive
+        # against a non-string name/subject slipping through (e.g. a NaN
+        # float surviving the JSON round-trip from a bad upstream build) -
+        # str(...) rather than assuming, since "not a string" shouldn't be
+        # able to take the whole search index down.
+        self._search_rows = [
+            (str(c["code"]).lower(), str(c["name"] or "").lower(), c) for c in self.courses
+        ]
         self.subjects: list[dict] = sorted(
-            {(c["subject_code"], c["subject"]) for c in self.courses if c["subject"]},
+            {(c["subject_code"], str(c["subject"])) for c in self.courses if isinstance(c.get("subject"), str)},
             key=lambda s: s[1],
         )
 
